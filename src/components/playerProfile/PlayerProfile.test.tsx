@@ -814,6 +814,7 @@ describe("PlayerProfile contract surfaces", () => {
     await waitFor(() => {
       expect(invoke).toHaveBeenCalledWith("delegate_renewals", {
         playerIds: ["player-1"],
+        staffIds: [],
         maxWageIncreasePct: 35,
         maxContractYears: 3,
       });

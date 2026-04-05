@@ -126,6 +126,10 @@ pub fn generate_world(
             let nationality = pick_nationality_from_def(&tdef.country, &country_codes, &mut rng);
             let s = generate_random_staff_from_def(
                 &team_id,
+                teams_out
+                    .last()
+                    .map(|t| t.reputation)
+                    .unwrap_or(400),
                 role.clone(),
                 &nationality,
                 &names_def,

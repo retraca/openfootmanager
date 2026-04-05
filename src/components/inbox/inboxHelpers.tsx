@@ -292,6 +292,15 @@ export function isChooseOptionAction(
 }
 
 export function getNavigationTarget(route: string): NavigationTarget {
+  const staffMatch = route.match(/^\/staff\/(.+)$/);
+  if (staffMatch) {
+    return {
+      tab: "__selectStaff",
+      context: { messageId: staffMatch[1] },
+      shouldResolveAction: false,
+    };
+  }
+
   const teamMatch = route.match(/^\/team\/(.+)$/);
 
   if (teamMatch) {

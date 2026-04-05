@@ -572,6 +572,7 @@ describe("FinancesTab facilities", () => {
     await waitFor(() => {
       expect(mockedInvoke).toHaveBeenCalledWith("delegate_renewals", {
         playerIds: ["player-critical"],
+        staffIds: [],
         maxWageIncreasePct: 35,
         maxContractYears: 3,
       });

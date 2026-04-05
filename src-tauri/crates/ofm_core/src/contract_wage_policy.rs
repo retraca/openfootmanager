@@ -7,6 +7,19 @@ const WAGE_SOFT_CAP_PCT: i64 = 110;
 const LEGACY_OVER_BUDGET_GRACE_PCT: i64 = 3;
 const LEGACY_OVER_BUDGET_GRACE_MIN: i64 = 25_000;
 
+pub fn annual_team_wage_bill_for_projection(game: &Game, team_id: &str) -> i64 {
+    annual_team_wage_bill(game, team_id)
+}
+
+pub fn projected_annual_wage_bill_for_entity(
+    game: &Game,
+    team_id: &str,
+    current_entity_wage: u32,
+    offered_wage: u32,
+) -> i64 {
+    projected_annual_wage_bill(game, team_id, current_entity_wage, offered_wage)
+}
+
 fn annual_team_wage_bill(game: &Game, team_id: &str) -> i64 {
     let player_wages: i64 = game
         .players

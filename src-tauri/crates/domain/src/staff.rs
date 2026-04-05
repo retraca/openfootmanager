@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::player::PlayerMoraleCore;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Staff {
     pub id: String,
@@ -21,11 +23,22 @@ pub struct Staff {
     #[serde(default)]
     pub specialization: Option<CoachingSpecialization>,
 
-    // Contract & finances
+    // Contract & finances — wage is annual (same convention as Player::wage); UI shows weekly (÷ 52).
     #[serde(default)]
     pub wage: u32,
     #[serde(default)]
     pub contract_end: Option<String>,
+
+    /// Morale 0–100 (renewal / negotiation pressure, player-parity).
+    #[serde(default = "default_staff_morale")]
+    pub morale: u8,
+    /// Renewal sessions, manager trust, etc. (reuse player architecture).
+    #[serde(default)]
+    pub morale_core: PlayerMoraleCore,
+}
+
+fn default_staff_morale() -> u8 {
+    100
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -78,6 +91,8 @@ impl Staff {
             specialization: None,
             wage: 0,
             contract_end: None,
+            morale: 100,
+            morale_core: PlayerMoraleCore::default(),
         }
     }
 }

@@ -5,14 +5,16 @@ use rusqlite::{Connection, params};
 pub fn upsert_staff(conn: &Connection, s: &Staff) -> Result<(), String> {
     let attrs_json =
         serde_json::to_string(&s.attributes).map_err(|e| format!("JSON error: {}", e))?;
+    let morale_core_json =
+        serde_json::to_string(&s.morale_core).map_err(|e| format!("JSON error: {}", e))?;
     let role_str = format!("{:?}", s.role);
     let spec_str = s.specialization.as_ref().map(|sp| format!("{:?}", sp));
 
     conn.execute(
         "INSERT OR REPLACE INTO staff
          (id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, role,
-          attributes, team_id, specialization, wage, contract_end)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+          attributes, team_id, specialization, wage, contract_end, morale, morale_core)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
         params![
             s.id,
             s.first_name,
@@ -27,6 +29,8 @@ pub fn upsert_staff(conn: &Connection, s: &Staff) -> Result<(), String> {
             spec_str,
             s.wage,
             s.contract_end,
+            s.morale,
+            morale_core_json,
         ],
     )
     .map_err(|e| format!("Failed to upsert staff: {}", e))?;
@@ -69,7 +73,7 @@ pub fn load_all_staff(conn: &Connection) -> Result<Vec<Staff>, String> {
     let mut stmt = conn
         .prepare(
             "SELECT id, first_name, last_name, date_of_birth, nationality, football_nation, birth_country, role,
-                    attributes, team_id, specialization, wage, contract_end
+                    attributes, team_id, specialization, wage, contract_end, morale, morale_core
              FROM staff",
         )
         .map_err(|e| format!("Failed to prepare staff query: {}", e))?;
@@ -89,6 +93,7 @@ fn row_to_staff(row: &rusqlite::Row) -> rusqlite::Result<Staff> {
     let role_str: String = row.get(7)?;
     let attrs_json: String = row.get(8)?;
     let spec_str: Option<String> = row.get(10)?;
+    let morale_core_json: String = row.get(14)?;
 
     Ok(Staff {
         id: row.get(0)?,
@@ -109,6 +114,9 @@ fn row_to_staff(row: &rusqlite::Row) -> rusqlite::Result<Staff> {
         specialization: spec_str.and_then(|s| parse_specialization(&s)),
         wage: row.get(11)?,
         contract_end: row.get(12)?,
+        morale: row.get::<_, i64>(13)? as u8,
+        morale_core: serde_json::from_str::<domain::player::PlayerMoraleCore>(&morale_core_json)
+            .unwrap_or_default(),
     })
 }
 

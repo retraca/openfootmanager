@@ -7,6 +7,7 @@ import type { DashboardNavigateContext } from "./dashboardProfileNavigation";
 export interface DashboardTabContentHandlers {
     onSelectPlayer: (id: string, options?: PlayerSelectionOptions) => void;
     onSelectTeam: (id: string) => void;
+    onSelectStaff: (id: string) => void;
     onGameUpdate: (state: GameStateData) => void;
     onNavigate: (tab: string, context?: DashboardNavigateContext) => void;
 }

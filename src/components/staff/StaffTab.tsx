@@ -12,12 +12,8 @@ import {
   GraduationCap,
   Star,
 } from "lucide-react";
-import {
-  getTeamName,
-  calcAge,
-  formatVal,
-  formatWeeklyAmount,
-} from "../../lib/helpers";
+import { getTeamName, calcAge } from "../../lib/helpers";
+import { formatPlayerWage } from "../playerProfile/PlayerProfile.helpers";
 import { countryName } from "../../lib/countries";
 import { useTranslation } from "react-i18next";
 import { hireStaff, releaseStaff } from "../../services/staffService";
@@ -25,6 +21,7 @@ import { hireStaff, releaseStaff } from "../../services/staffService";
 interface StaffTabProps {
   gameState: GameStateData;
   onGameUpdate?: (state: GameStateData) => void;
+  onSelectStaff?: (id: string) => void;
 }
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
@@ -60,7 +57,11 @@ function ovrRating(s: StaffData): number {
   );
 }
 
-export default function StaffTab({ gameState, onGameUpdate }: StaffTabProps) {
+export default function StaffTab({
+  gameState,
+  onGameUpdate,
+  onSelectStaff,
+}: StaffTabProps) {
   const { t, i18n } = useTranslation();
   const weeklySuffix = t("finances.perWeekSuffix", "/wk");
   const userTeamId = gameState.manager.team_id;
@@ -252,10 +253,7 @@ export default function StaffTab({ gameState, onGameUpdate }: StaffTabProps) {
                         )}
                         {staff.wage > 0 && (
                           <span className="text-[10px] bg-gray-100 dark:bg-navy-700 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded font-heading uppercase tracking-wider">
-                            {formatWeeklyAmount(
-                              formatVal(staff.wage),
-                              weeklySuffix,
-                            )}
+                            {formatPlayerWage(staff.wage, weeklySuffix)}
                           </span>
                         )}
                       </div>
@@ -288,27 +286,39 @@ export default function StaffTab({ gameState, onGameUpdate }: StaffTabProps) {
                       </p>
                     </div>
 
-                    {/* Action button */}
-                    {view === "mystaff" && (
-                      <button
-                        disabled={actionLoading === staff.id}
-                        onClick={() => handleRelease(staff.id)}
-                        className={`p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors ${actionLoading === staff.id ? "opacity-50 pointer-events-none" : ""}`}
-                        title={t("staff.releaseStaff")}
-                      >
-                        <UserMinus className="w-4 h-4" />
-                      </button>
-                    )}
-                    {view === "available" && (
-                      <button
-                        disabled={actionLoading === staff.id}
-                        onClick={() => handleHire(staff.id)}
-                        className={`p-2 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors ${actionLoading === staff.id ? "opacity-50 pointer-events-none" : ""}`}
-                        title={t("staff.hireStaff")}
-                      >
-                        <UserPlus className="w-4 h-4" />
-                      </button>
-                    )}
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-1">
+                      {onSelectStaff ? (
+                        <button
+                          type="button"
+                          onClick={() => onSelectStaff(staff.id)}
+                          className="p-2 rounded-lg bg-gray-100 dark:bg-navy-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-navy-600 transition-colors"
+                          title={t("squad.viewProfile", "View profile")}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      ) : null}
+                      {view === "mystaff" && (
+                        <button
+                          disabled={actionLoading === staff.id}
+                          onClick={() => handleRelease(staff.id)}
+                          className={`p-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors ${actionLoading === staff.id ? "opacity-50 pointer-events-none" : ""}`}
+                          title={t("staff.releaseStaff")}
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </button>
+                      )}
+                      {view === "available" && (
+                        <button
+                          disabled={actionLoading === staff.id}
+                          onClick={() => handleHire(staff.id)}
+                          className={`p-2 rounded-lg bg-primary-50 dark:bg-primary-500/10 text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-500/20 transition-colors ${actionLoading === staff.id ? "opacity-50 pointer-events-none" : ""}`}
+                          title={t("staff.hireStaff")}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </CardBody>
               </Card>

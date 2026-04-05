@@ -179,12 +179,15 @@ Computed per team before each training session:
 | GoalKeeping | (Future: GK-specific) |
 | Youth | (Future: youth development) |
 
-### Hiring & Releasing
+### Contracts, wages, and payroll (player parity)
 
-- **Hire**: Assigns an unattached staff member to the user's team. The staff's wage is recorded as an expense.
-- **Release**: Removes the staff member from the team (becomes unattached again).
+- **`wage` is annual** (same convention as players): the weekly finances / UI figures use ÷ 52.
+- **Hire**: No lump-sum signing hit to `season_expenses`. If the candidate has no wage/contract, the game assigns a sensible **annual** wage and **contract end** from role, attributes, and club reputation (`ensure_staff_contract_on_hire`).
+- **Release**: **Severance** is paid from remaining contract (weekly portion of annual wage, capped), debiting `finance` and recording in `season_expenses`. The staff member becomes a **free agent** (no club, wage 0, contract cleared). Active **scouting assignments** for that scout are cancelled.
+- **Contract expiry** (weekly processing): employed staff past `contract_end` become free agents (same cleanup as release), with an inbox contract message including a **view profile** action (`/staff/{id}`).
+- **Renewals**: Staff use `propose_staff_renewal` / board wage policy (`renewal_wage_policy_allows`) and morale/renewal session fields analogous to players. **Delegated renewals** can include staff cases (separate `staff_ids` vs `player_ids` filters); the assistant cannot delegate their **own** contract in the same batch.
 
-The world generates 12 unattached free-agent staff at game start, plus 4 staff per team (AssistantManager, Coach, Scout, Physio).
+The world generates 12 unattached free-agent staff at game start, plus 4 staff per team (AssistantManager, Coach, Scout, Physio), each with **generated annual wage and contract end** for coherent saves and UI.
 
 ---
 
@@ -422,11 +425,12 @@ Each team tracks financial state:
 - Sponsorship (future)
 
 ### Expenses
-- Staff wages (recorded on hire)
-- Player wages (weekly)
+- **Staff wages**: paid **weekly** with the squad wage bill (`calc_wages` / annual wage bill ÷ 52), not as a lump sum on hire.
+- **Player wages**: weekly from annual wages.
+- **Staff severance**: on release, per remaining contract (capped).
 - Transfer fees (future)
 
-The `FinancesTab` displays an overview with cards for balance, wage budget, transfer budget, and a payroll table.
+The `FinancesTab` shows squad **and staff** payroll (weekly figures), **contract risk** lists for **players and staff**, and delegated renewal actions that pass both `playerIds` and `staffIds` to the assistant workflow.
 
 ---
 

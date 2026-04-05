@@ -18,6 +18,8 @@ pub mod player_rating;
 pub mod random_events;
 pub mod schedule;
 pub mod scouting;
+pub mod staff_contracts;
+pub mod staff_ops;
 pub mod season_awards;
 pub mod season_context;
 pub mod state;

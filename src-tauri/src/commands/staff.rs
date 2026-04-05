@@ -2,6 +2,10 @@ use log::info;
 use tauri::State;
 
 use ofm_core::game::Game;
+use ofm_core::staff_ops::{
+    ensure_staff_contract_on_hire, remove_scouting_assignments_for_scout,
+    reset_staff_to_free_agent, severance_for_staff_release,
+};
 use ofm_core::state::StateManager;
 
 #[tauri::command]
@@ -21,6 +25,14 @@ fn hire_staff_internal(state: &StateManager, staff_id: &str) -> Result<Game, Str
         .clone()
         .ok_or("No team assigned".to_string())?;
 
+    let hiring_team = game
+        .teams
+        .iter()
+        .find(|t| t.id == team_id)
+        .cloned()
+        .ok_or_else(|| "Team not found".to_string())?;
+    let current_date = game.clock.current_date.date_naive();
+
     let staff = game
         .staff
         .iter_mut()
@@ -32,11 +44,7 @@ fn hire_staff_internal(state: &StateManager, staff_id: &str) -> Result<Game, Str
     }
 
     staff.team_id = Some(team_id.clone());
-
-    // Deduct wage from team budget
-    if let Some(team) = game.teams.iter_mut().find(|t| t.id == team_id) {
-        team.season_expenses += staff.wage as i64;
-    }
+    ensure_staff_contract_on_hire(current_date, staff, &hiring_team);
 
     state.set_game(game.clone());
     Ok(game)
@@ -88,6 +96,7 @@ mod tests {
     fn make_employed_staff() -> Staff {
         let mut staff = make_staff();
         staff.team_id = Some("team-1".to_string());
+        staff.contract_end = Some("2027-08-01".to_string());
         staff
     }
 
@@ -151,7 +160,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(staff.team_id.as_deref(), Some("team-1"));
-        assert_eq!(team.season_expenses, 12_000);
+        assert_eq!(team.season_expenses, 0);
 
         let stored_game = state.get_game(|game| game.clone()).expect("stored game");
         let stored_staff = stored_game
@@ -165,13 +174,22 @@ mod tests {
             .find(|team| team.id == "team-1")
             .expect("stored team should exist");
         assert_eq!(stored_staff.team_id.as_deref(), Some("team-1"));
-        assert_eq!(stored_team.season_expenses, 12_000);
+        assert_eq!(stored_team.season_expenses, 0);
     }
 
     #[test]
     fn release_staff_internal_updates_state() {
         let state = StateManager::new();
         state.set_game(make_game_with_employed_staff());
+
+        let before_finance = state
+            .get_game(|g| g.clone())
+            .unwrap()
+            .teams
+            .iter()
+            .find(|t| t.id == "team-1")
+            .unwrap()
+            .finance;
 
         let response = release_staff_internal(&state, "staff-1").expect("response");
         let staff = response
@@ -181,6 +199,10 @@ mod tests {
             .unwrap();
 
         assert!(staff.team_id.is_none());
+        assert_eq!(staff.wage, 0);
+        let team = response.teams.iter().find(|t| t.id == "team-1").unwrap();
+        assert!(team.season_expenses > 0);
+        assert_eq!(team.finance, before_finance - team.season_expenses);
 
         let stored_game = state.get_game(|game| game.clone()).expect("stored game");
         let stored_staff = stored_game
@@ -209,17 +231,34 @@ fn release_staff_internal(state: &StateManager, staff_id: &str) -> Result<Game, 
         .clone()
         .ok_or("No team assigned".to_string())?;
 
+    let current_date = game.clock.current_date.date_naive();
+    let severance = {
+        let staff_ref = game
+            .staff
+            .iter()
+            .find(|s| s.id == staff_id)
+            .ok_or("Staff member not found".to_string())?;
+        if staff_ref.team_id.as_deref() != Some(&team_id) {
+            return Err("Staff member does not belong to your team".to_string());
+        }
+        severance_for_staff_release(staff_ref, current_date)
+    };
+
+    remove_scouting_assignments_for_scout(&mut game, staff_id);
+
+    if severance > 0 {
+        if let Some(team) = game.teams.iter_mut().find(|t| t.id == team_id) {
+            team.finance -= severance;
+            team.season_expenses += severance;
+        }
+    }
+
     let staff = game
         .staff
         .iter_mut()
         .find(|s| s.id == staff_id)
-        .ok_or("Staff member not found".to_string())?;
-
-    if staff.team_id.as_deref() != Some(&team_id) {
-        return Err("Staff member does not belong to your team".to_string());
-    }
-
-    staff.team_id = None;
+        .ok_or_else(|| "Staff member not found".to_string())?;
+    reset_staff_to_free_agent(staff);
 
     state.set_game(game.clone());
     Ok(game)

@@ -4,6 +4,7 @@ import type { GameStateData } from "../../store/gameStore";
 import {
   createDashboardProfileNavigationState,
   selectDashboardPlayer,
+  selectDashboardStaff,
   selectDashboardTeam,
 } from "./dashboardProfileNavigation";
 import { createDashboardTabContentModel } from "./dashboardTabContentModel";
@@ -26,6 +27,15 @@ vi.mock("../teamProfile", () => ({
       <span>Team Profile Mock</span>
       <button onClick={onClose}>close-team</button>
       <button onClick={() => onSelectPlayer("player-2")}>select-player</button>
+    </div>
+  ),
+}));
+
+vi.mock("../staffProfile/StaffProfile", () => ({
+  default: ({ onClose }: any) => (
+    <div>
+      <span>Staff Profile Mock</span>
+      <button onClick={onClose}>close-staff</button>
     </div>
   ),
 }));
@@ -206,6 +216,7 @@ describe("DashboardWorkspaceContent", () => {
           handlers: {
             onSelectPlayer: vi.fn(),
             onSelectTeam: vi.fn(),
+            onSelectStaff: vi.fn(),
             onGameUpdate: vi.fn(),
             onNavigate,
           },
@@ -214,6 +225,7 @@ describe("DashboardWorkspaceContent", () => {
         onNavigate={onNavigate}
         onSelectPlayer={vi.fn()}
         onSelectTeam={vi.fn()}
+        onSelectStaff={vi.fn()}
         onGameUpdate={vi.fn()}
       />,
     );
@@ -247,6 +259,7 @@ describe("DashboardWorkspaceContent", () => {
           handlers: {
             onSelectPlayer: vi.fn(),
             onSelectTeam: vi.fn(),
+            onSelectStaff: vi.fn(),
             onGameUpdate: vi.fn(),
             onNavigate: vi.fn(),
           },
@@ -255,6 +268,7 @@ describe("DashboardWorkspaceContent", () => {
         onNavigate={vi.fn()}
         onSelectPlayer={vi.fn()}
         onSelectTeam={vi.fn()}
+        onSelectStaff={vi.fn()}
         onGameUpdate={vi.fn()}
       />,
     );
@@ -285,6 +299,7 @@ describe("DashboardWorkspaceContent", () => {
           handlers: {
             onSelectPlayer: vi.fn(),
             onSelectTeam: vi.fn(),
+            onSelectStaff: vi.fn(),
             onGameUpdate: vi.fn(),
             onNavigate: vi.fn(),
           },
@@ -293,11 +308,80 @@ describe("DashboardWorkspaceContent", () => {
         onNavigate={vi.fn()}
         onSelectPlayer={vi.fn()}
         onSelectTeam={vi.fn()}
+        onSelectStaff={vi.fn()}
         onGameUpdate={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Team Profile Mock")).toBeInTheDocument();
     expect(screen.queryByText("Tab Content Teams")).not.toBeInTheDocument();
+  });
+
+  it("renders the staff profile branch when a staff member is selected", () => {
+    const gameState = createGameState();
+    gameState.staff = [
+      {
+        id: "staff-1",
+        first_name: "Alex",
+        last_name: "Coach",
+        date_of_birth: "1975-01-01",
+        nationality: "GB",
+        role: "Coach",
+        attributes: {
+          coaching: 60,
+          judging_ability: 50,
+          judging_potential: 50,
+          physiotherapy: 40,
+        },
+        team_id: "team-1",
+        specialization: null,
+        wage: 100_000,
+        contract_end: "2028-01-01",
+        morale: 100,
+        morale_core: {
+          manager_trust: 50,
+          unresolved_issue: null,
+          recent_treatment: null,
+          pending_promise: null,
+          talk_cooldown_until: null,
+          renewal_state: null,
+        },
+      },
+    ];
+    const profileNavigation = selectDashboardStaff(
+      createDashboardProfileNavigationState("Staff"),
+      "staff-1",
+    );
+
+    render(
+      <DashboardWorkspaceContent
+        dashboardAlerts={[]}
+        gameState={gameState}
+        profileNavigation={profileNavigation}
+        dashboardTabContentModel={createDashboardTabContentModel({
+          activeTab: "Staff",
+          gameState,
+          seasonComplete: false,
+          visitedOnboardingTabs: new Set<string>(),
+          initialMessageId: null,
+          handlers: {
+            onSelectPlayer: vi.fn(),
+            onSelectTeam: vi.fn(),
+            onSelectStaff: vi.fn(),
+            onGameUpdate: vi.fn(),
+            onNavigate: vi.fn(),
+          },
+        })}
+        onBack={vi.fn()}
+        onNavigate={vi.fn()}
+        onSelectPlayer={vi.fn()}
+        onSelectTeam={vi.fn()}
+        onSelectStaff={vi.fn()}
+        onGameUpdate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Staff Profile Mock")).toBeInTheDocument();
+    expect(screen.queryByText("Tab Content Staff")).not.toBeInTheDocument();
   });
 });

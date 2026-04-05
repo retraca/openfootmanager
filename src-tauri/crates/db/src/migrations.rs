@@ -1,7 +1,7 @@
 use rusqlite_migration::{M, Migrations};
 
 /// Number of migrations defined. Keep in sync with the vec in `all_migrations`.
-pub const MIGRATION_COUNT: usize = 15;
+pub const MIGRATION_COUNT: usize = 16;
 
 /// All migrations for a per-save game database.
 /// Each save `.db` file gets this schema applied via `rusqlite_migration`.
@@ -37,6 +37,8 @@ pub fn all_migrations() -> Migrations<'static> {
         M::up(include_str!("sql/v014_football_identity.sql")),
         // V15: Historical player and team match stats
         M::up(include_str!("sql/v015_match_stats_history.sql")),
+        // V16: Staff morale + renewal state
+        M::up(include_str!("sql/v016_staff_morale.sql")),
     ])
 }
 

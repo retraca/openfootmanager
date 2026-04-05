@@ -401,6 +401,7 @@ export default function PlayerProfile({
         "delegate_renewals",
         {
           playerIds: [player.id],
+          staffIds: [],
           maxWageIncreasePct: 35,
           maxContractYears: 3,
         },

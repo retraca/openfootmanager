@@ -46,6 +46,7 @@ describe("dashboardTabContentModel", function (): void {
     it("derives the manager id and preserves handler references", function (): void {
         const onSelectPlayer = vi.fn();
         const onSelectTeam = vi.fn();
+        const onSelectStaff = vi.fn();
         const onGameUpdate = vi.fn();
         const onNavigate = vi.fn();
 
@@ -58,6 +59,7 @@ describe("dashboardTabContentModel", function (): void {
             handlers: {
                 onSelectPlayer,
                 onSelectTeam,
+                onSelectStaff,
                 onGameUpdate,
                 onNavigate,
             },
@@ -69,6 +71,7 @@ describe("dashboardTabContentModel", function (): void {
         expect(model.visitedOnboardingTabs.has("Squad")).toBe(true);
         expect(model.handlers.onSelectPlayer).toBe(onSelectPlayer);
         expect(model.handlers.onSelectTeam).toBe(onSelectTeam);
+        expect(model.handlers.onSelectStaff).toBe(onSelectStaff);
         expect(model.handlers.onGameUpdate).toBe(onGameUpdate);
         expect(model.handlers.onNavigate).toBe(onNavigate);
     });

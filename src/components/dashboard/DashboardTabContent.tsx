@@ -36,6 +36,7 @@ export default function DashboardTabContent({
       onNavigate,
       onSelectPlayer,
       onSelectTeam,
+      onSelectStaff,
     },
   } = viewModel;
 
@@ -84,6 +85,7 @@ export default function DashboardTabContent({
           gameState={gameState}
           onGameUpdate={onGameUpdate}
           onSelectPlayer={onSelectPlayer}
+          onSelectStaff={onSelectStaff}
         />
       )}
 
@@ -113,7 +115,11 @@ export default function DashboardTabContent({
       )}
 
       {activeTab === "Staff" && (
-        <StaffTab gameState={gameState} onGameUpdate={onGameUpdate} />
+        <StaffTab
+          gameState={gameState}
+          onGameUpdate={onGameUpdate}
+          onSelectStaff={onSelectStaff}
+        />
       )}
 
       {activeTab === "Scouting" && (

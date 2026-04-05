@@ -379,6 +379,7 @@ fn assistant_can_complete_routine_delegate_renewal_even_when_manager_trust_is_lo
         &mut game,
         DelegatedRenewalOptions {
             player_ids: Some(vec!["player-1".to_string()]),
+            staff_ids: None,
             max_wage_increase_pct: 35,
             max_contract_years: 3,
         },

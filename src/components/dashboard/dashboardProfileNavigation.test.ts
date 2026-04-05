@@ -17,7 +17,9 @@ describe("dashboardProfileNavigation", () => {
       ...createDashboardProfileNavigationState("Inbox"),
       selectedPlayerId: "player-1",
       selectedTeamId: "team-1",
-      navHistory: [{ tab: "Home", playerId: null, teamId: null }],
+      navHistory: [
+        { tab: "Home", playerId: null, teamId: null, staffId: null },
+      ],
     };
 
     expect(resetDashboardToTab(state, "Squad", "message-1")).toEqual({
@@ -25,6 +27,7 @@ describe("dashboardProfileNavigation", () => {
       selectedPlayerId: null,
       selectedPlayerOptions: null,
       selectedTeamId: null,
+      selectedStaffId: null,
       initialMessageId: "message-1",
       navHistory: [],
     });
@@ -40,7 +43,7 @@ describe("dashboardProfileNavigation", () => {
     expect(next.selectedPlayerId).toBe("player-7");
     expect(next.selectedTeamId).toBeNull();
     expect(next.navHistory).toEqual([
-      { tab: "Home", playerId: null, teamId: null },
+      { tab: "Home", playerId: null, teamId: null, staffId: null },
     ]);
   });
 
@@ -58,6 +61,7 @@ describe("dashboardProfileNavigation", () => {
     expect(previous.selectedPlayerId).toBe("player-2");
     expect(previous.selectedPlayerOptions).toBeNull();
     expect(previous.selectedTeamId).toBeNull();
+    expect(previous.selectedStaffId).toBeNull();
     expect(previous.navHistory).toHaveLength(1);
   });
 

@@ -5,13 +5,16 @@ use crate::contracts::{
     has_active_manager_block, round_up_to_nearest_thousand,
 };
 use crate::game::Game;
+use crate::staff_contracts::{
+    expected_staff_contract_years, expected_staff_wage, has_active_manager_block_staff,
+};
 use chrono::{Months, NaiveDate};
 use domain::message::{
     DelegatedRenewalCaseData as DelegatedRenewalCaseMessageData, DelegatedRenewalReportData,
     InboxMessage, MessageCategory, MessageContext, MessagePriority,
 };
 use domain::player::{ContractRenewalState, Player, RenewalSessionOutcome, RenewalSessionStatus};
-use domain::staff::StaffRole;
+use domain::staff::{Staff, StaffRole};
 use std::collections::{HashMap, HashSet};
 
 pub fn delegate_renewals(
@@ -36,14 +39,21 @@ pub fn delegate_renewals(
             staff.team_id.as_deref() == Some(team.id.as_str())
                 && staff.role == StaffRole::AssistantManager
         })
+        .cloned()
         .ok_or("No assistant manager assigned to your team".to_string())?;
     let current_date = game.clock.current_date.date_naive();
     let today = current_date.format("%Y-%m-%d").to_string();
     let max_years = options.max_contract_years.max(1);
-    let selected_ids = options
+    let selected_player_ids = options
         .player_ids
         .clone()
         .map(|ids| ids.into_iter().collect::<HashSet<_>>());
+    let selected_staff_ids = options
+        .staff_ids
+        .clone()
+        .map(|ids| ids.into_iter().collect::<HashSet<_>>());
+    let allow_auto_staff_candidates =
+        options.staff_ids.is_none() && options.player_ids.is_none();
     let candidate_indices: Vec<usize> = game
         .players
         .iter()
@@ -54,7 +64,7 @@ pub fn delegate_renewals(
                 return None;
             }
 
-            if let Some(selected_ids) = selected_ids.as_ref() {
+            if let Some(selected_ids) = selected_player_ids.as_ref() {
                 if selected_ids.contains(&player.id) {
                     return Some(index);
                 }
@@ -91,6 +101,7 @@ pub fn delegate_renewals(
         let mut case = DelegatedRenewalCase {
             player_id: player.id.clone(),
             player_name: player.match_name.clone(),
+            staff_id: None,
             status: DelegatedRenewalResultStatus::Failed,
             agreed_wage: None,
             agreed_years: None,
@@ -132,7 +143,7 @@ pub fn delegate_renewals(
             continue;
         }
 
-        let delegation_score = assistant_delegation_score(assistant, player, current_date);
+        let delegation_score = assistant_delegation_score(&assistant, player, current_date);
 
         if delegation_score >= 95 {
             let agreed_wage = expected_wage.min(max_wage);
@@ -222,6 +233,188 @@ pub fn delegate_renewals(
         report.cases.push(case);
     }
 
+    let assistant_id = assistant.id.clone();
+    let staff_candidate_indices: Vec<usize> = game
+        .staff
+        .iter()
+        .enumerate()
+        .filter_map(|(index, staff_member)| {
+            if staff_member.team_id.as_deref() != Some(team.id.as_str())
+                || staff_member.contract_end.is_none()
+            {
+                return None;
+            }
+            if staff_member.id == assistant_id {
+                return None;
+            }
+            if let Some(selected_ids) = selected_staff_ids.as_ref() {
+                if selected_ids.contains(&staff_member.id) {
+                    return Some(index);
+                }
+                return None;
+            }
+            if allow_auto_staff_candidates
+                && contract_warning_stage(staff_member.contract_end.as_deref(), current_date)
+                    .is_some()
+            {
+                return Some(index);
+            }
+            None
+        })
+        .collect();
+
+    for staff_index in staff_candidate_indices {
+        let staff_ref = &game.staff[staff_index];
+        let expected_wage = expected_staff_wage(staff_ref, &team, current_date);
+        let expected_years = expected_staff_contract_years(staff_ref, current_date);
+        let agreed_years = expected_years.min(max_years);
+        let max_wage = round_up_to_nearest_thousand(
+            staff_ref
+                .wage
+                .saturating_mul(100 + options.max_wage_increase_pct)
+                / 100,
+        );
+        let display_name = format!(
+            "{} {}",
+            staff_ref.first_name, staff_ref.last_name
+        );
+        let mut case = DelegatedRenewalCase {
+            player_id: String::new(),
+            player_name: display_name.clone(),
+            staff_id: Some(staff_ref.id.clone()),
+            status: DelegatedRenewalResultStatus::Failed,
+            agreed_wage: None,
+            agreed_years: None,
+            note: String::new(),
+            note_key: None,
+            note_params: HashMap::new(),
+        };
+
+        if has_active_manager_block_staff(staff_ref, current_date) {
+            report.failure_count += 1;
+            case.note = "You told me not to reopen contract talks yet.".to_string();
+            case.note_key = Some("be.msg.delegatedRenewals.notes.managerBlocked".to_string());
+            report.cases.push(case);
+            continue;
+        }
+
+        if max_wage < expected_wage || max_years < expected_years {
+            report.stalled_count += 1;
+            case.status = DelegatedRenewalResultStatus::Stalled;
+            case.note = format!(
+                "Their camp want around €{}/wk for {} years, which is beyond the delegation limits.",
+                expected_wage, expected_years
+            );
+            case.note_key = Some("be.msg.delegatedRenewals.notes.beyondLimits".to_string());
+            case.note_params = delegated_note_params(&[
+                ("wage", expected_wage.to_string()),
+                ("years", expected_years.to_string()),
+            ]);
+            let st = &mut game.staff[staff_index];
+            let state = st
+                .morale_core
+                .renewal_state
+                .get_or_insert_with(ContractRenewalState::default);
+            state.status = RenewalSessionStatus::Stalled;
+            state.last_assistant_attempt_date = Some(today.clone());
+            state.last_outcome = Some(RenewalSessionOutcome::Stalled);
+            state.conversation_round = 0;
+            report.cases.push(case);
+            continue;
+        }
+
+        let staff_snap = &game.staff[staff_index];
+        let delegation_score =
+            assistant_delegation_score_staff(&assistant, staff_snap, current_date);
+
+        if delegation_score >= 95 {
+            let agreed_wage = expected_wage.min(max_wage);
+            if !renewal_wage_policy_allows(game, &team, staff_snap.wage, agreed_wage) {
+                report.stalled_count += 1;
+                case.status = DelegatedRenewalResultStatus::Stalled;
+                case.note = "I could progress the talks, but board wage limits prevented this renewal from being completed.".to_string();
+                case.note_key = Some("be.msg.delegatedRenewals.notes.boardWagePolicy".to_string());
+                case.note_params =
+                    delegated_note_params(&[("budget", team.wage_budget.to_string())]);
+                let st = &mut game.staff[staff_index];
+                let state = st
+                    .morale_core
+                    .renewal_state
+                    .get_or_insert_with(ContractRenewalState::default);
+                state.status = RenewalSessionStatus::Stalled;
+                state.last_assistant_attempt_date = Some(today.clone());
+                state.last_outcome = Some(RenewalSessionOutcome::Stalled);
+                state.conversation_round = 0;
+                report.cases.push(case);
+                continue;
+            }
+
+            let new_contract_end = current_date
+                .checked_add_months(Months::new(agreed_years * 12))
+                .ok_or("Unable to calculate delegated contract end date".to_string())?;
+            let st = &mut game.staff[staff_index];
+            st.wage = agreed_wage;
+            st.contract_end = Some(new_contract_end.format("%Y-%m-%d").to_string());
+            let state = st
+                .morale_core
+                .renewal_state
+                .get_or_insert_with(ContractRenewalState::default);
+            state.status = RenewalSessionStatus::Agreed;
+            state.manager_blocked_until = None;
+            state.last_assistant_attempt_date = Some(today.clone());
+            state.last_outcome = Some(RenewalSessionOutcome::AcceptedByAssistant);
+            state.conversation_round = 0;
+
+            report.success_count += 1;
+            case.status = DelegatedRenewalResultStatus::Successful;
+            case.agreed_wage = Some(st.wage);
+            case.agreed_years = Some(agreed_years);
+            case.note = "I was able to close this one without needing you to step in.".to_string();
+            case.note_key = Some("be.msg.delegatedRenewals.notes.completed".to_string());
+            report.cases.push(case);
+            continue;
+        }
+
+        if delegation_score >= 72 {
+            report.stalled_count += 1;
+            case.status = DelegatedRenewalResultStatus::Stalled;
+            case.note = format!(
+                "They would listen, but they still want about €{}/wk for {} years and prefer to hear from you directly.",
+                expected_wage, expected_years
+            );
+            case.note_key = Some("be.msg.delegatedRenewals.notes.prefersManager".to_string());
+            case.note_params = delegated_note_params(&[
+                ("wage", expected_wage.to_string()),
+                ("years", expected_years.to_string()),
+            ]);
+            let st = &mut game.staff[staff_index];
+            let state = st
+                .morale_core
+                .renewal_state
+                .get_or_insert_with(ContractRenewalState::default);
+            state.status = RenewalSessionStatus::Open;
+            state.last_assistant_attempt_date = Some(today.clone());
+            state.last_outcome = Some(RenewalSessionOutcome::Stalled);
+            state.conversation_round = 0;
+            report.cases.push(case);
+            continue;
+        }
+
+        report.failure_count += 1;
+        case.note = "They are not willing to commit through me under the current relationship and contract situation.".to_string();
+        case.note_key = Some("be.msg.delegatedRenewals.notes.relationshipBlocked".to_string());
+        let st = &mut game.staff[staff_index];
+        let state = st
+            .morale_core
+            .renewal_state
+            .get_or_insert_with(ContractRenewalState::default);
+        state.status = RenewalSessionStatus::Stalled;
+        state.last_assistant_attempt_date = Some(today.clone());
+        state.last_outcome = Some(RenewalSessionOutcome::RejectedByPlayer);
+        state.conversation_round = 0;
+        report.cases.push(case);
+    }
+
     if !report.cases.is_empty() {
         let team_name = team.name.clone();
         let message_id_suffix = game.messages.len();
@@ -263,6 +456,49 @@ fn assistant_delegation_score(
         0
     };
     let issue_penalty = player
+        .morale_core
+        .unresolved_issue
+        .as_ref()
+        .map(|issue| i32::from(issue.severity) / 2)
+        .unwrap_or(0);
+
+    assistant_quality + trust_bonus + morale_bonus + urgency_bonus
+        - importance_penalty
+        - issue_penalty
+}
+
+fn assistant_delegation_score_staff(
+    assistant: &Staff,
+    colleague: &Staff,
+    current_date: NaiveDate,
+) -> i32 {
+    let assistant_quality = (i32::from(assistant.attributes.coaching) * 4
+        + i32::from(assistant.attributes.judging_ability) * 3
+        + i32::from(assistant.attributes.judging_potential) * 3)
+        / 10;
+    let trust_bonus = i32::from(colleague.morale_core.manager_trust) / 3;
+    let morale_bonus = i32::from(colleague.morale) / 2;
+    let urgency_bonus = match contract_warning_stage(colleague.contract_end.as_deref(), current_date)
+    {
+        Some(ContractWarningStage::FinalWeeks) => 18,
+        Some(ContractWarningStage::ThreeMonths) => 14,
+        Some(ContractWarningStage::SixMonths) => 10,
+        Some(ContractWarningStage::TwelveMonths) => 6,
+        None => 2,
+    };
+    let ovr = (i32::from(colleague.attributes.coaching)
+        + i32::from(colleague.attributes.judging_ability)
+        + i32::from(colleague.attributes.judging_potential)
+        + i32::from(colleague.attributes.physiotherapy))
+        / 4;
+    let importance_penalty = if ovr >= 75 {
+        20
+    } else if ovr >= 60 {
+        12
+    } else {
+        0
+    };
+    let issue_penalty = colleague
         .morale_core
         .unresolved_issue
         .as_ref()
@@ -324,6 +560,7 @@ fn delegated_renewal_report_message(
                 .map(|case| DelegatedRenewalCaseMessageData {
                     player_id: case.player_id.clone(),
                     player_name: case.player_name.clone(),
+                    staff_id: case.staff_id.clone(),
                     status: match case.status {
                         DelegatedRenewalResultStatus::Successful => "successful".to_string(),
                         DelegatedRenewalResultStatus::Failed => "failed".to_string(),

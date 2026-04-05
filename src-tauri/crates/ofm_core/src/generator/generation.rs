@@ -1,8 +1,12 @@
+use chrono::{Months, NaiveDate};
+
 use domain::player::{Player, PlayerAttributes, Position};
 use domain::staff::{Staff, StaffAttributes, StaffRole};
 use domain::team::PlayStyle;
 use rand::Rng;
 use uuid::Uuid;
+
+use crate::staff_ops::proposed_initial_annual_wage_from_rep;
 
 use super::definitions::NamesDefinition;
 
@@ -284,6 +288,7 @@ pub(super) fn generate_random_player_from_def(
 
 pub(super) fn generate_random_staff_from_def(
     team_id: &str,
+    team_reputation: u32,
     role: StaffRole,
     nationality: &str,
     names_def: &NamesDefinition,
@@ -336,6 +341,12 @@ pub(super) fn generate_random_staff_from_def(
     );
     s.nationality = nationality.to_string();
     s.team_id = Some(team_id.to_string());
+    s.wage = proposed_initial_annual_wage_from_rep(&s, team_reputation);
+    let contract_anchor =
+        NaiveDate::from_ymd_opt(2026, 7, 1).expect("valid generator contract anchor date");
+    if let Some(end) = contract_anchor.checked_add_months(Months::new(rng.gen_range(18..37))) {
+        s.contract_end = Some(end.format("%Y-%m-%d").to_string());
+    }
     s
 }
 
@@ -371,5 +382,12 @@ pub(super) fn generate_random_staff_unattached_from_def(
         attributes,
     );
     s.nationality = nationality.to_string();
+    let pseudo_rep = rng.gen_range(280..620);
+    s.wage = proposed_initial_annual_wage_from_rep(&s, pseudo_rep);
+    let contract_anchor =
+        NaiveDate::from_ymd_opt(2026, 7, 1).expect("valid generator contract anchor date");
+    if let Some(end) = contract_anchor.checked_add_months(Months::new(rng.gen_range(12..31))) {
+        s.contract_end = Some(end.format("%Y-%m-%d").to_string());
+    }
     s
 }

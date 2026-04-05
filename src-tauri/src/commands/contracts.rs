@@ -9,6 +9,10 @@ use ofm_core::contracts::{
     RenewalOffer,
 };
 use ofm_core::game::Game;
+use ofm_core::staff_contracts::{
+    propose_staff_renewal as propose_staff_renewal_core,
+    project_staff_renewal_financial_impact,
+};
 use ofm_core::state::StateManager;
 
 #[derive(Debug, Clone, Serialize)]
@@ -48,12 +52,14 @@ pub async fn propose_renewal(
 pub async fn delegate_renewals(
     state: State<'_, StateManager>,
     player_ids: Option<Vec<String>>,
+    staff_ids: Option<Vec<String>>,
     max_wage_increase_pct: u32,
     max_contract_years: u32,
 ) -> Result<DelegatedRenewalCommandResponse, String> {
     delegate_renewals_internal(
         &state,
         player_ids,
+        staff_ids,
         max_wage_increase_pct,
         max_contract_years,
     )
@@ -66,6 +72,25 @@ pub async fn preview_renewal_financial_impact(
     weekly_wage: u32,
 ) -> Result<RenewalFinancialProjectionCommandResponse, String> {
     preview_renewal_financial_impact_internal(&state, &player_id, weekly_wage)
+}
+
+#[tauri::command]
+pub async fn propose_staff_renewal(
+    state: State<'_, StateManager>,
+    staff_id: String,
+    weekly_wage: u32,
+    contract_years: u32,
+) -> Result<RenewalCommandResponse, String> {
+    propose_staff_renewal_internal(&state, &staff_id, weekly_wage, contract_years)
+}
+
+#[tauri::command]
+pub async fn preview_staff_renewal_financial_impact(
+    state: State<'_, StateManager>,
+    staff_id: String,
+    weekly_wage: u32,
+) -> Result<RenewalFinancialProjectionCommandResponse, String> {
+    preview_staff_renewal_financial_impact_internal(&state, &staff_id, weekly_wage)
 }
 
 fn propose_renewal_internal(
@@ -109,12 +134,13 @@ fn propose_renewal_internal(
 fn delegate_renewals_internal(
     state: &StateManager,
     player_ids: Option<Vec<String>>,
+    staff_ids: Option<Vec<String>>,
     max_wage_increase_pct: u32,
     max_contract_years: u32,
 ) -> Result<DelegatedRenewalCommandResponse, String> {
     info!(
-        "[cmd] delegate_renewals: player_ids={:?}, max_wage_increase_pct={}, max_contract_years={}",
-        player_ids, max_wage_increase_pct, max_contract_years
+        "[cmd] delegate_renewals: player_ids={:?}, staff_ids={:?}, max_wage_increase_pct={}, max_contract_years={}",
+        player_ids, staff_ids, max_wage_increase_pct, max_contract_years
     );
 
     let mut game = state
@@ -125,6 +151,7 @@ fn delegate_renewals_internal(
         &mut game,
         DelegatedRenewalOptions {
             player_ids,
+            staff_ids,
             max_wage_increase_pct,
             max_contract_years,
         },
@@ -151,6 +178,63 @@ fn preview_renewal_financial_impact_internal(
 
     let projection =
         ofm_core::contracts::project_renewal_financial_impact(&game, player_id, weekly_wage)?;
+
+    Ok(RenewalFinancialProjectionCommandResponse { projection })
+}
+
+fn propose_staff_renewal_internal(
+    state: &StateManager,
+    staff_id: &str,
+    weekly_wage: u32,
+    contract_years: u32,
+) -> Result<RenewalCommandResponse, String> {
+    info!(
+        "[cmd] propose_staff_renewal: staff_id={}, weekly_wage={}, contract_years={}",
+        staff_id, weekly_wage, contract_years
+    );
+
+    let mut game = state
+        .get_game(|g: &Game| g.clone())
+        .ok_or("No active game session".to_string())?;
+
+    let outcome = propose_staff_renewal_core(
+        &mut game,
+        staff_id,
+        RenewalOffer {
+            weekly_wage,
+            contract_years,
+        },
+    )?;
+
+    state.set_game(game.clone());
+
+    Ok(RenewalCommandResponse {
+        outcome: outcome.decision,
+        game,
+        suggested_wage: outcome.suggested_wage,
+        suggested_years: outcome.suggested_years,
+        session_status: outcome.session_status,
+        is_terminal: outcome.is_terminal,
+        cooled_off: outcome.cooled_off,
+        feedback: outcome.feedback,
+    })
+}
+
+fn preview_staff_renewal_financial_impact_internal(
+    state: &StateManager,
+    staff_id: &str,
+    weekly_wage: u32,
+) -> Result<RenewalFinancialProjectionCommandResponse, String> {
+    info!(
+        "[cmd] preview_staff_renewal_financial_impact: staff_id={}, weekly_wage={}",
+        staff_id, weekly_wage
+    );
+
+    let game = state
+        .get_game(|g: &Game| g.clone())
+        .ok_or("No active game session".to_string())?;
+
+    let projection = project_staff_renewal_financial_impact(&game, staff_id, weekly_wage)?;
 
     Ok(RenewalFinancialProjectionCommandResponse { projection })
 }
@@ -331,9 +415,14 @@ mod tests {
         let state = StateManager::new();
         state.set_game(make_game());
 
-        let response =
-            delegate_renewals_internal(&state, Some(vec!["player-1".to_string()]), 35, 3)
-                .expect("response");
+        let response = delegate_renewals_internal(
+            &state,
+            Some(vec!["player-1".to_string()]),
+            None,
+            35,
+            3,
+        )
+        .expect("response");
 
         assert_eq!(response.report.success_count, 1);
         assert_eq!(response.report.failure_count, 0);
@@ -427,9 +516,14 @@ mod tests {
         );
         state.set_save_id(save_id.clone());
 
-        let response =
-            delegate_renewals_internal(&state, Some(vec!["player-1".to_string()]), 35, 3)
-                .expect("delegated renewal should succeed");
+        let response = delegate_renewals_internal(
+            &state,
+            Some(vec!["player-1".to_string()]),
+            None,
+            35,
+            3,
+        )
+        .expect("delegated renewal should succeed");
         assert_eq!(response.report.success_count, 1);
 
         let persisted_before_manual_save = save_manager

@@ -2,9 +2,10 @@ import type {
   FixtureData,
   GameStateData,
   PlayerData,
+  StaffData,
   TeamData,
 } from "../../store/gameStore";
-import { formatVal } from "../../lib/helpers";
+import { formatVal, getContractRiskLevel } from "../../lib/helpers";
 import { getTeamFinanceSnapshot } from "../../lib/finance";
 import { buildStartingXIIds } from "../squad/SquadTab.helpers";
 
@@ -18,6 +19,7 @@ export interface DashboardAlert {
 export interface DashboardSearchResults {
   matchedPlayers: PlayerData[];
   matchedTeams: TeamData[];
+  matchedStaff: StaffData[];
 }
 
 type DashboardAlertTranslator = (
@@ -82,9 +84,11 @@ export function getDashboardSearchResults(
     return {
       matchedPlayers: [],
       matchedTeams: [],
+      matchedStaff: [],
     };
   }
 
+  const myTeamId = gameState.manager.team_id;
   return {
     matchedPlayers: gameState.players
       .filter((player) => {
@@ -102,6 +106,16 @@ export function getDashboardSearchResults(
         );
       })
       .slice(0, 4),
+    matchedStaff: gameState.staff
+      .filter((staffMember) => {
+        const matchesName = `${staffMember.first_name} ${staffMember.last_name}`
+          .toLowerCase()
+          .includes(normalizedQuery);
+        const onMyTeam =
+          myTeamId !== null && staffMember.team_id === myTeamId;
+        return matchesName && onMyTeam;
+      })
+      .slice(0, 5),
   };
 }
 
@@ -217,6 +231,38 @@ export function getDashboardAlerts(
         text: t("dashboard.alerts.wagePressure", {
           percent: financeSnapshot.wageBudgetUsagePercent,
           defaultValue: "Wage bill at {{percent}}% of budget",
+        }),
+        tab: "Finances",
+        severity: "warn",
+      });
+    }
+
+    const contractRiskPlayerCount = roster.filter((player) => {
+      return (
+        Boolean(player.contract_end) &&
+        getContractRiskLevel(
+          player.contract_end,
+          gameState.clock.current_date,
+        ) !== "stable"
+      );
+    }).length;
+    const contractRiskStaffCount = teamStaff.filter((staffMember) => {
+      return (
+        Boolean(staffMember.contract_end) &&
+        getContractRiskLevel(
+          staffMember.contract_end,
+          gameState.clock.current_date,
+        ) !== "stable"
+      );
+    }).length;
+    const contractRiskCount = contractRiskPlayerCount + contractRiskStaffCount;
+    if (contractRiskCount > 0) {
+      alerts.push({
+        id: "contract_deadlines",
+        text: t("dashboard.alerts.contractDeadlines", {
+          count: contractRiskCount,
+          defaultValue:
+            "{{count}} player or staff contract(s) need attention soon",
         }),
         tab: "Finances",
         severity: "warn",

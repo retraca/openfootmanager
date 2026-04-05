@@ -8,6 +8,7 @@ export interface DashboardProfileHistoryEntry {
   tab: string;
   playerId: string | null;
   teamId: string | null;
+  staffId: string | null;
 }
 
 export interface DashboardProfileNavigationState {
@@ -15,6 +16,7 @@ export interface DashboardProfileNavigationState {
   selectedPlayerId: string | null;
   selectedPlayerOptions: PlayerSelectionOptions | null;
   selectedTeamId: string | null;
+  selectedStaffId: string | null;
   initialMessageId: string | null;
   navHistory: DashboardProfileHistoryEntry[];
 }
@@ -27,6 +29,7 @@ export function createDashboardProfileNavigationState(
     selectedPlayerId: null,
     selectedPlayerOptions: null,
     selectedTeamId: null,
+    selectedStaffId: null,
     initialMessageId: null,
     navHistory: [],
   };
@@ -40,6 +43,7 @@ export function clearDashboardProfileSelection(
     selectedPlayerId: null,
     selectedPlayerOptions: null,
     selectedTeamId: null,
+    selectedStaffId: null,
   };
 }
 
@@ -67,6 +71,7 @@ export function pushDashboardHistory(
         tab: state.activeTab,
         playerId: state.selectedPlayerId,
         teamId: state.selectedTeamId,
+        staffId: state.selectedStaffId,
       },
     ],
   };
@@ -83,6 +88,7 @@ export function navigateDashboardProfiles(
       selectedTeamId: context.messageId,
       selectedPlayerId: null,
       selectedPlayerOptions: null,
+      selectedStaffId: null,
     };
   }
 
@@ -90,6 +96,17 @@ export function navigateDashboardProfiles(
     return {
       ...pushDashboardHistory(state),
       selectedPlayerId: context.messageId,
+      selectedPlayerOptions: null,
+      selectedTeamId: null,
+      selectedStaffId: null,
+    };
+  }
+
+  if (tab === "__selectStaff" && context?.messageId) {
+    return {
+      ...pushDashboardHistory(state),
+      selectedStaffId: context.messageId,
+      selectedPlayerId: null,
       selectedPlayerOptions: null,
       selectedTeamId: null,
     };
@@ -113,6 +130,7 @@ export function goBackDashboardProfile(
     selectedPlayerId: previous.playerId,
     selectedPlayerOptions: null,
     selectedTeamId: previous.teamId,
+    selectedStaffId: previous.staffId,
     navHistory: state.navHistory.slice(0, -1),
   };
 }
@@ -127,6 +145,7 @@ export function selectDashboardPlayer(
     selectedPlayerId: id,
     selectedPlayerOptions: options ?? null,
     selectedTeamId: null,
+    selectedStaffId: null,
   };
 }
 
@@ -139,6 +158,20 @@ export function selectDashboardTeam(
     selectedTeamId: id,
     selectedPlayerId: null,
     selectedPlayerOptions: null,
+    selectedStaffId: null,
+  };
+}
+
+export function selectDashboardStaff(
+  state: DashboardProfileNavigationState,
+  id: string,
+): DashboardProfileNavigationState {
+  return {
+    ...pushDashboardHistory(state),
+    selectedStaffId: id,
+    selectedPlayerId: null,
+    selectedPlayerOptions: null,
+    selectedTeamId: null,
   };
 }
 
@@ -151,6 +184,7 @@ export function openDashboardSearchPlayer(
     selectedPlayerId: id,
     selectedPlayerOptions: null,
     selectedTeamId: null,
+    selectedStaffId: null,
   };
 }
 
@@ -163,6 +197,20 @@ export function openDashboardSearchTeam(
     selectedTeamId: id,
     selectedPlayerId: null,
     selectedPlayerOptions: null,
+    selectedStaffId: null,
+  };
+}
+
+export function openDashboardSearchStaff(
+  state: DashboardProfileNavigationState,
+  id: string,
+): DashboardProfileNavigationState {
+  return {
+    ...state,
+    selectedStaffId: id,
+    selectedPlayerId: null,
+    selectedPlayerOptions: null,
+    selectedTeamId: null,
   };
 }
 
@@ -172,6 +220,7 @@ export function hasDashboardProfileHistory(
   return (
     state.navHistory.length > 0 ||
     state.selectedPlayerId !== null ||
-    state.selectedTeamId !== null
+    state.selectedTeamId !== null ||
+    state.selectedStaffId !== null
   );
 }

@@ -152,6 +152,25 @@ export interface TransferOfferData {
   date: string;
 }
 
+/** Mirrors domain `PlayerMoraleCore` when present on staff (renewal sessions). */
+export interface StaffMoraleCoreData {
+  manager_trust: number;
+  unresolved_issue: unknown | null;
+  recent_treatment: unknown | null;
+  pending_promise: unknown | null;
+  talk_cooldown_until: string | null;
+  renewal_state: StaffContractRenewalStateData | null;
+}
+
+export interface StaffContractRenewalStateData {
+  status: string;
+  manager_blocked_until: string | null;
+  last_attempt_date: string | null;
+  last_assistant_attempt_date: string | null;
+  last_outcome: string | null;
+  conversation_round: number;
+}
+
 export interface StaffData {
   id: string;
   first_name: string;
@@ -167,8 +186,12 @@ export interface StaffData {
   };
   team_id: string | null;
   specialization: string | null;
+  /** Annual wage (same as `PlayerData.wage`); UI shows weekly via ÷ 52. */
   wage: number;
   contract_end: string | null;
+  /** 0–100; optional for older saves. */
+  morale?: number;
+  morale_core?: StaffMoraleCoreData;
 }
 
 export interface MessageAction {
@@ -215,6 +238,7 @@ export interface ScoutReportData {
 export interface DelegatedRenewalCaseMessageData {
   player_id: string;
   player_name: string;
+  staff_id?: string | null;
   status: string;
   agreed_wage?: number | null;
   agreed_years?: number | null;
@@ -236,6 +260,7 @@ export interface PlayerSelectionOptions {
 export interface MessageContext {
   team_id: string | null;
   player_id: string | null;
+  staff_id?: string | null;
   fixture_id: string | null;
   match_result: null | {
     home_team_id: string;

@@ -5,7 +5,9 @@ use crate::contract_wage_policy::{
 use crate::delegated_renewals::delegate_renewals as delegate_renewals_service;
 use crate::game::Game;
 use chrono::{Datelike, Months, NaiveDate};
-use domain::message::{InboxMessage, MessageCategory, MessagePriority};
+use domain::message::{
+    ActionType, InboxMessage, MessageAction, MessageCategory, MessageContext, MessagePriority,
+};
 use domain::negotiation::{NegotiationFeedback, NegotiationMood};
 use domain::player::{ContractRenewalState, Player, RenewalSessionOutcome, RenewalSessionStatus};
 use domain::team::Team;
@@ -83,6 +85,8 @@ pub struct RenewalFinancialProjection {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DelegatedRenewalOptions {
     pub player_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub staff_ids: Option<Vec<String>>,
     pub max_wage_increase_pct: u32,
     pub max_contract_years: u32,
 }
@@ -99,6 +103,8 @@ pub enum DelegatedRenewalResultStatus {
 pub struct DelegatedRenewalCase {
     pub player_id: String,
     pub player_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staff_id: Option<String>,
     pub status: DelegatedRenewalResultStatus,
     pub agreed_wage: Option<u32>,
     pub agreed_years: Option<u32>,
@@ -493,6 +499,46 @@ pub fn process_contract_expiries(game: &mut Game) {
             ));
         }
     }
+
+    let expired_staff_indices: Vec<usize> = game
+        .staff
+        .iter()
+        .enumerate()
+        .filter_map(|(index, staff_member)| {
+            let days_remaining =
+                contract_days_remaining(staff_member.contract_end.as_deref(), current_date)?;
+            if staff_member.team_id.is_some() && days_remaining <= 0 {
+                Some(index)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    for staff_index in expired_staff_indices {
+        let staff_id = game.staff[staff_index].id.clone();
+        let staff_name = format!(
+            "{} {}",
+            game.staff[staff_index].first_name, game.staff[staff_index].last_name
+        );
+        let team_id = game.staff[staff_index].team_id.clone();
+
+        if let Some(team_id) = team_id.as_deref()
+            && let Some(team) = game.teams.iter().find(|candidate| candidate.id == team_id)
+        {
+            let team_name = team.name.clone();
+            crate::staff_ops::remove_scouting_assignments_for_scout(game, &staff_id);
+            crate::staff_ops::reset_staff_to_free_agent(&mut game.staff[staff_index]);
+
+            game.messages.push(staff_contract_expired_message(
+                &staff_id,
+                &staff_name,
+                team_id,
+                &team_name,
+                &today,
+            ));
+        }
+    }
 }
 
 pub(crate) fn expected_wage(player: &Player, team: &Team, current_date: NaiveDate) -> u32 {
@@ -752,7 +798,7 @@ fn remaining_contract_days(player: &Player, current_date: NaiveDate) -> i64 {
         .max(0)
 }
 
-pub(crate) fn round_up_to_nearest_thousand(value: u32) -> u32 {
+pub fn round_up_to_nearest_thousand(value: u32) -> u32 {
     if value == 0 {
         return 0;
     }
@@ -761,6 +807,14 @@ pub(crate) fn round_up_to_nearest_thousand(value: u32) -> u32 {
 }
 
 fn contract_days_remaining(contract_end: Option<&str>, current_date: NaiveDate) -> Option<i64> {
+    contract_days_remaining_public(contract_end, current_date)
+}
+
+/// Days until `contract_end` (can be negative if already passed).
+pub fn contract_days_remaining_public(
+    contract_end: Option<&str>,
+    current_date: NaiveDate,
+) -> Option<i64> {
     let contract_end = contract_end?;
     let contract_end_date = NaiveDate::parse_from_str(contract_end, "%Y-%m-%d").ok()?;
     Some((contract_end_date - current_date).num_days())
@@ -805,4 +859,44 @@ fn contract_expired_message(
     .with_category(MessageCategory::Contract)
     .with_priority(MessagePriority::Urgent)
     .with_sender_role("Assistant Manager")
+}
+
+fn staff_contract_expired_message(
+    staff_id: &str,
+    staff_name: &str,
+    team_id: &str,
+    team_name: &str,
+    date: &str,
+) -> InboxMessage {
+    InboxMessage::new(
+        format!("staff_contract_expired_{}", staff_id),
+        format!("{} — contract expired", staff_name),
+        format!(
+            "{} has left {} after their contract expired. They are now available for hire.",
+            staff_name, team_name
+        ),
+        "Assistant Manager".to_string(),
+        date.to_string(),
+    )
+    .with_category(MessageCategory::Contract)
+    .with_priority(MessagePriority::Urgent)
+    .with_sender_role("Assistant Manager")
+    .with_context(MessageContext {
+        team_id: Some(team_id.to_string()),
+        player_id: None,
+        staff_id: Some(staff_id.to_string()),
+        fixture_id: None,
+        match_result: None,
+        scout_report: None,
+        delegated_renewal_report: None,
+    })
+    .with_action(MessageAction {
+        id: "view_staff_profile".to_string(),
+        label: "View profile".to_string(),
+        action_type: ActionType::NavigateTo {
+            route: format!("/staff/{staff_id}"),
+        },
+        resolved: false,
+        label_key: Some("common.viewProfile".to_string()),
+    })
 }

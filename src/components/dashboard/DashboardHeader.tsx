@@ -11,7 +11,7 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { getTeamName } from "../../lib/helpers";
-import type { PlayerData, TeamData } from "../../store/gameStore";
+import type { PlayerData, StaffData, TeamData } from "../../store/gameStore";
 import type { MatchModeType } from "../../hooks/useAdvanceTime";
 import { Badge, ThemeToggle } from "../ui";
 import { translatePositionAbbreviation } from "../squad/SquadTab.helpers";
@@ -34,6 +34,7 @@ interface DashboardHeaderProps {
   isSaving: boolean;
   matchMode: MatchModeType;
   matchedPlayers: PlayerData[];
+  matchedStaff: StaffData[];
   matchedTeams: TeamData[];
   modeMeta: Record<MatchModeType, DashboardMatchModeMeta>;
   onBack: () => void;
@@ -44,6 +45,7 @@ interface DashboardHeaderProps {
   onSearchQueryChange: (query: string) => void;
   onSelectMatchMode: (mode: MatchModeType) => void;
   onSelectSearchPlayer: (playerId: string) => void;
+  onSelectSearchStaff: (staffId: string) => void;
   onSelectSearchTeam: (teamId: string) => void;
   onSkipToMatchDay: () => void;
   onToggleContinueMenu: () => void;
@@ -162,22 +164,30 @@ function renderContinueButtonContent(
 
 function renderSearchResults(props: {
   matchedPlayers: PlayerData[];
+  matchedStaff: StaffData[];
   matchedTeams: TeamData[];
   onSelectSearchPlayer: (playerId: string) => void;
+  onSelectSearchStaff: (staffId: string) => void;
   onSelectSearchTeam: (teamId: string) => void;
   teams: TeamData[];
   t: (key: string) => string;
 }): JSX.Element {
   const {
     matchedPlayers,
+    matchedStaff,
     matchedTeams,
     onSelectSearchPlayer,
+    onSelectSearchStaff,
     onSelectSearchTeam,
     t,
     teams,
   } = props;
 
-  if (matchedPlayers.length === 0 && matchedTeams.length === 0) {
+  if (
+    matchedPlayers.length === 0 &&
+    matchedTeams.length === 0 &&
+    matchedStaff.length === 0
+  ) {
     return (
       <p className="p-3 text-xs text-gray-400 dark:text-gray-500">
         {t("dashboard.noResults")}
@@ -236,6 +246,27 @@ function renderSearchResults(props: {
           ))}
         </div>
       )}
+      {matchedStaff.length > 0 && (
+        <div>
+          <p className="px-3 pb-1 pt-2 text-xs font-heading font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            {t("dashboard.searchStaff", "Staff")}
+          </p>
+          {matchedStaff.map((staffMember) => (
+            <button
+              key={staffMember.id}
+              onMouseDown={() => onSelectSearchStaff(staffMember.id)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-navy-600"
+            >
+              <Badge variant="primary" size="sm">
+                {t(`staff.roles.${staffMember.role}`).slice(0, 3)}
+              </Badge>
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                {staffMember.first_name} {staffMember.last_name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </>
   );
 }
@@ -249,6 +280,7 @@ export default function DashboardHeader({
   isSaving,
   matchMode,
   matchedPlayers,
+  matchedStaff,
   matchedTeams,
   modeMeta,
   onBack,
@@ -259,6 +291,7 @@ export default function DashboardHeader({
   onSearchQueryChange,
   onSelectMatchMode,
   onSelectSearchPlayer,
+  onSelectSearchStaff,
   onSelectSearchTeam,
   onSkipToMatchDay,
   onToggleContinueMenu,
@@ -344,8 +377,10 @@ export default function DashboardHeader({
           <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-navy-600 dark:bg-navy-700">
             {renderSearchResults({
               matchedPlayers,
+              matchedStaff,
               matchedTeams,
               onSelectSearchPlayer,
+              onSelectSearchStaff,
               onSelectSearchTeam,
               t,
               teams,

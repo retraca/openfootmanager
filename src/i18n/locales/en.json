@@ -74,11 +74,12 @@
     "simulating": "Simulating...",
     "loading": "Loading game state...",
     "noResults": "No results found.",
-    "searchPlaceholder": "Search players, teams...",
+    "searchPlaceholder": "Search players, teams, staff...",
     "sectionClub": "Club",
     "sectionWorld": "World",
     "searchTeams": "Teams",
     "searchPlayers": "Players",
+    "searchStaff": "Staff",
     "scouting": "Scouting",
     "youthAcademy": "Youth Academy",
     "saveGame": "Save game",
@@ -91,7 +92,11 @@
       "injuredStartingXi": "{{count}} injured player(s) in Starting XI — replace them",
       "incompleteStartingXi": "Starting XI incomplete — set your lineup",
       "urgentUnread": "{{count}} urgent message(s) unread",
-      "matchTodayStartingXi": "Match today! Set your starting XI"
+      "matchTodayStartingXi": "Match today! Set your starting XI",
+      "financeCrisis": "Finances critical — balance {{balance}}, runway {{weeks}} week(s)",
+      "financeRunway": "Cash runway down to {{count}} week(s)",
+      "wagePressure": "Wage bill at {{percent}}% of budget",
+      "contractDeadlines": "{{count}} player or staff contract(s) need attention soon"
     }
   },
   "continueMenu": {
@@ -292,6 +297,7 @@
     "position": "Position",
     "nationality": "Nationality",
     "contract": "Contract",
+    "viewProfile": "View profile",
     "renewContract": "Renew Contract",
     "status": "Status",
     "average": "Average",
@@ -640,6 +646,7 @@
     "noAvailableStaff": "No available staff found.",
     "releaseStaff": "Release staff member",
     "hireStaff": "Hire staff member",
+    "role": "Role",
     "best": "Best",
     "roles": {
       "AssistantManager": "Assistant Manager",
@@ -663,6 +670,20 @@
       "Youth": "Youth Dev"
     }
   },
+  "staffProfile": {
+    "renewalFeedbackBlockedHeadline": "They are not reopening the conversation yet.",
+    "renewalFeedbackBlockedDetail": "Your earlier stance is still shaping the mood here, so they will not engage again for now.",
+    "renewalFeedbackAcceptedLateHeadline": "They accepted, but patience was running low.",
+    "renewalFeedbackAcceptedLateDetail": "You got the agreement after a tougher exchange; they were close to ending the talks.",
+    "renewalFeedbackAcceptedHeadline": "They were happy with the package.",
+    "renewalFeedbackAcceptedDetail": "The offer matched their expectations closely enough to close it cleanly.",
+    "renewalFeedbackTenseHeadline": "The negotiation is difficult.",
+    "renewalFeedbackTenseDetail": "Trust, morale, or timing pressure is making them push hard. Another weak offer may end it.",
+    "renewalFeedbackFirmHeadline": "They want clearer upside before committing.",
+    "renewalFeedbackFirmDetail": "Wage and length need to feel clearly fair from their side before they sign.",
+    "renewalFeedbackCalmHeadline": "Talks remain open and professional.",
+    "renewalFeedbackCalmDetail": "This still feels like a normal back-and-forth; relationship and timing are manageable."
+  },
   "finances": {
     "overview": "Financial Overview",
     "wageBill": "Wage Bill",
@@ -671,6 +692,9 @@
     "underBudget": "Under budget",
     "overBudget": "Over budget!",
     "payroll": "Payroll — Top Earners",
+    "payrollStaff": "Staff payroll",
+    "contractRiskPlayers": "Players",
+    "contractRiskStaff": "Staff",
     "squadValue": "Squad Value",
     "clubBalance": "Club Balance",
     "wageBudget": "Wage Budget",

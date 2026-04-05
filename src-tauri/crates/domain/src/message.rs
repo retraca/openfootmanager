@@ -92,6 +92,8 @@ pub struct InboxMessage {
 pub struct MessageContext {
     pub team_id: Option<String>,
     pub player_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staff_id: Option<String>,
     pub fixture_id: Option<String>,
     pub match_result: Option<ContextMatchResult>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -112,6 +114,8 @@ pub struct DelegatedRenewalReportData {
 pub struct DelegatedRenewalCaseData {
     pub player_id: String,
     pub player_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub staff_id: Option<String>,
     pub status: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub agreed_wage: Option<u32>,

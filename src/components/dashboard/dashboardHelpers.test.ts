@@ -236,6 +236,7 @@ describe("dashboardHelpers", function (): void {
     expect(getDashboardSearchResults(gameState, "b")).toEqual({
       matchedPlayers: [],
       matchedTeams: [],
+      matchedStaff: [],
     });
 
     const results = getDashboardSearchResults(gameState, "br");
@@ -244,6 +245,47 @@ describe("dashboardHelpers", function (): void {
     expect(results.matchedPlayers[0].id).toBe("player-2");
     expect(results.matchedTeams).toHaveLength(1);
     expect(results.matchedTeams[0].id).toBe("team-2");
+    expect(results.matchedStaff).toEqual([]);
+  });
+
+  it("includes my-team staff in dashboard search results", function (): void {
+    const gameState = createGameState({
+      staff: [
+        {
+          id: "staff-1",
+          first_name: "Pat",
+          last_name: "Trainer",
+          date_of_birth: "1975-05-05",
+          nationality: "BR",
+          football_nation: "",
+          birth_country: null,
+          role: "Coach",
+          attributes: {
+            coaching: 70,
+            judging_ability: 50,
+            judging_potential: 50,
+            physiotherapy: 40,
+          },
+          team_id: "team-1",
+          specialization: null,
+          wage: 120_000,
+          contract_end: "2028-06-30",
+          morale: 100,
+          morale_core: {
+            manager_trust: 50,
+            unresolved_issue: null,
+            recent_treatment: null,
+            pending_promise: null,
+            talk_cooldown_until: null,
+            renewal_state: null,
+          },
+        },
+      ],
+    });
+
+    const results = getDashboardSearchResults(gameState, "pat");
+    expect(results.matchedStaff).toHaveLength(1);
+    expect(results.matchedStaff[0].id).toBe("staff-1");
   });
 
   it("maps player positions to dashboard badge variants", function (): void {

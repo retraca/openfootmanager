@@ -96,6 +96,8 @@ pub fn run() {
             propose_renewal,
             delegate_renewals,
             preview_renewal_financial_impact,
+            propose_staff_renewal,
+            preview_staff_renewal_financial_impact,
             set_formation,
             set_starting_xi,
             set_play_style,

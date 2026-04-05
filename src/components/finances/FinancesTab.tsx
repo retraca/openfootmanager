@@ -7,7 +7,7 @@ import {
   PlayerSelectionOptions,
 } from "../../store/gameStore";
 import { Card, CardHeader, CardBody, Badge, ProgressBar, Button } from "../ui";
-import { User } from "lucide-react";
+import { User, UserCog } from "lucide-react";
 import {
   formatVal,
   formatWeeklyAmount,
@@ -110,12 +110,14 @@ interface FinancesTabProps {
   gameState: GameStateData;
   onGameUpdate?: (state: GameStateData) => void;
   onSelectPlayer?: (id: string, options?: PlayerSelectionOptions) => void;
+  onSelectStaff?: (id: string) => void;
 }
 
 export default function FinancesTab({
   gameState,
   onGameUpdate,
   onSelectPlayer,
+  onSelectStaff,
 }: FinancesTabProps) {
   const { t } = useTranslation();
   const myTeam = gameState.teams.find(
@@ -131,6 +133,9 @@ export default function FinancesTab({
     string | null
   >(null);
   const [selectedRiskPlayerIds, setSelectedRiskPlayerIds] = useState<string[]>(
+    [],
+  );
+  const [selectedRiskStaffIds, setSelectedRiskStaffIds] = useState<string[]>(
     [],
   );
 
@@ -171,14 +176,39 @@ export default function FinancesTab({
       const rightDate = right.player.contract_end ?? "9999-12-31";
       return leftDate.localeCompare(rightDate);
     });
-  const atRiskWages = contractRiskPlayers.reduce(
-    (sum, { player }) => sum + annualAmountToWeeklyCommitment(player.wage),
-    0,
-  );
+  const contractRiskStaff = teamStaff
+    .map((staffMember) => {
+      const riskLevel = getContractRiskLevel(
+        staffMember.contract_end,
+        gameState.clock.current_date,
+      );
+      return { staff: staffMember, riskLevel };
+    })
+    .filter(
+      ({ riskLevel, staff: s }) => s.contract_end && riskLevel !== "stable",
+    )
+    .sort((left, right) => {
+      const leftDate = left.staff.contract_end ?? "9999-12-31";
+      const rightDate = right.staff.contract_end ?? "9999-12-31";
+      return leftDate.localeCompare(rightDate);
+    });
+  const atRiskWages =
+    contractRiskPlayers.reduce(
+      (sum, { player }) => sum + annualAmountToWeeklyCommitment(player.wage),
+      0,
+    ) +
+    contractRiskStaff.reduce(
+      (sum, { staff: s }) => sum + annualAmountToWeeklyCommitment(s.wage),
+      0,
+    );
   const selectedRiskPlayers = contractRiskPlayers.filter(({ player }) =>
     selectedRiskPlayerIds.includes(player.id),
   );
+  const selectedRiskStaff = contractRiskStaff.filter(({ staff: s }) =>
+    selectedRiskStaffIds.includes(s.id),
+  );
   const allRiskPlayerIds = contractRiskPlayers.map(({ player }) => player.id);
+  const allRiskStaffIds = contractRiskStaff.map(({ staff: s }) => s.id);
 
   useEffect(() => {
     setSelectedRiskPlayerIds((currentIds) => {
@@ -195,6 +225,19 @@ export default function FinancesTab({
     });
   }, [allRiskPlayerIds.join("|")]);
 
+  useEffect(() => {
+    setSelectedRiskStaffIds((currentIds) => {
+      const availableIdSet = new Set(allRiskStaffIds);
+      const nextIds = currentIds.filter((id) => availableIdSet.has(id));
+
+      if (nextIds.length > 0) {
+        return nextIds;
+      }
+
+      return allRiskStaffIds;
+    });
+  }, [allRiskStaffIds.join("|")]);
+
   function handleToggleRiskPlayer(playerId: string): void {
     setSelectedRiskPlayerIds((currentIds) => {
       if (currentIds.includes(playerId)) {
@@ -205,14 +248,34 @@ export default function FinancesTab({
     });
   }
 
-  function handleToggleAllRiskPlayers(): void {
-    setSelectedRiskPlayerIds((currentIds) => {
-      if (currentIds.length === allRiskPlayerIds.length) {
-        return [];
+  function handleToggleRiskStaff(staffId: string): void {
+    setSelectedRiskStaffIds((currentIds) => {
+      if (currentIds.includes(staffId)) {
+        return currentIds.filter((id) => id !== staffId);
       }
 
-      return allRiskPlayerIds;
+      return [...currentIds, staffId];
     });
+  }
+
+  function handleToggleAllContractRisk(): void {
+    const allPlayersSelected =
+      allRiskPlayerIds.length === 0 ||
+      selectedRiskPlayerIds.length === allRiskPlayerIds.length;
+    const allStaffSelected =
+      allRiskStaffIds.length === 0 ||
+      selectedRiskStaffIds.length === allRiskStaffIds.length;
+    if (
+      allPlayersSelected &&
+      allStaffSelected &&
+      (allRiskPlayerIds.length > 0 || allRiskStaffIds.length > 0)
+    ) {
+      setSelectedRiskPlayerIds([]);
+      setSelectedRiskStaffIds([]);
+    } else {
+      setSelectedRiskPlayerIds([...allRiskPlayerIds]);
+      setSelectedRiskStaffIds([...allRiskStaffIds]);
+    }
   }
 
   async function handleUpgradeFacility(facility: FacilityId): Promise<void> {
@@ -230,7 +293,7 @@ export default function FinancesTab({
   }
 
   async function handleDelegateRenewals(): Promise<void> {
-    if (selectedRiskPlayers.length === 0) {
+    if (selectedRiskPlayers.length === 0 && selectedRiskStaff.length === 0) {
       return;
     }
 
@@ -243,6 +306,7 @@ export default function FinancesTab({
         "delegate_renewals",
         {
           playerIds: selectedRiskPlayers.map(({ player }) => player.id),
+          staffIds: selectedRiskStaff.map(({ staff: s }) => s.id),
           maxWageIncreasePct: 35,
           maxContractYears: 3,
         },
@@ -474,12 +538,12 @@ export default function FinancesTab({
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     {t("finances.atRiskWages", { amount: atRiskWages })}
                   </p>
-                  {contractRiskPlayers.length > 0 ? (
-                    <div className="flex items-center gap-2">
+                  {contractRiskPlayers.length + contractRiskStaff.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={handleToggleAllRiskPlayers}
+                        onClick={handleToggleAllContractRisk}
                       >
                         {t("finances.selectAllAtRisk")}
                       </Button>
@@ -489,7 +553,8 @@ export default function FinancesTab({
                         onClick={() => void handleDelegateRenewals()}
                         disabled={
                           actionLoading === "delegate-renewals" ||
-                          selectedRiskPlayers.length === 0
+                          (selectedRiskPlayers.length === 0 &&
+                            selectedRiskStaff.length === 0)
                         }
                       >
                         {t("finances.delegateSelectedRenewals")}
@@ -499,65 +564,157 @@ export default function FinancesTab({
                 </div>
               </div>
 
-              {contractRiskPlayers.length > 0 ? (
-                <div className="space-y-3">
-                  {contractRiskPlayers.map(({ player, riskLevel }) => (
-                    <div
-                      key={player.id}
-                      className="rounded-lg border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 p-3 flex items-start justify-between gap-3"
-                    >
-                      <div className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedRiskPlayerIds.includes(player.id)}
-                          onChange={() => handleToggleRiskPlayer(player.id)}
-                          aria-label={`Select ${player.full_name}`}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500/30"
-                        />
-                        <div className="space-y-1">
-                          <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
-                            {player.full_name}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {t("finances.contractExpiresOn", {
-                              date: player.contract_end,
-                            })}
-                          </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-400">
-                            {t("playerProfile.yearsRemaining")}:{" "}
-                            {getContractYearsRemaining(
-                              player.contract_end,
-                              gameState.clock.current_date,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant={getContractRiskBadgeVariant(riskLevel)}>
-                          {riskLevel === "critical"
-                            ? t("finances.contractRiskCritical")
-                            : t("finances.contractRiskWarning")}
-                        </Badge>
-                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          €{annualAmountToWeeklyCommitment(player.wage).toLocaleString()}/wk
-                        </span>
-                        {onSelectPlayer ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              onSelectPlayer(player.id, {
-                                openRenewal: true,
-                              });
-                            }}
+              {contractRiskPlayers.length + contractRiskStaff.length > 0 ? (
+                <div className="space-y-4">
+                  {contractRiskPlayers.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-heading font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                        {t("finances.contractRiskPlayers", "Players")}
+                      </p>
+                      <div className="space-y-3">
+                        {contractRiskPlayers.map(({ player, riskLevel }) => (
+                          <div
+                            key={player.id}
+                            className="rounded-lg border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 p-3 flex items-start justify-between gap-3"
                           >
-                            {t("common.renewContract")}
-                          </Button>
-                        ) : null}
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedRiskPlayerIds.includes(
+                                  player.id,
+                                )}
+                                onChange={() =>
+                                  handleToggleRiskPlayer(player.id)
+                                }
+                                aria-label={`Select ${player.full_name}`}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500/30"
+                              />
+                              <div className="space-y-1">
+                                <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                  {player.full_name}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t("finances.contractExpiresOn", {
+                                    date: player.contract_end,
+                                  })}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t("playerProfile.yearsRemaining")}:{" "}
+                                  {getContractYearsRemaining(
+                                    player.contract_end,
+                                    gameState.clock.current_date,
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge
+                                variant={getContractRiskBadgeVariant(riskLevel)}
+                              >
+                                {riskLevel === "critical"
+                                  ? t("finances.contractRiskCritical")
+                                  : t("finances.contractRiskWarning")}
+                              </Badge>
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                €
+                                {annualAmountToWeeklyCommitment(
+                                  player.wage,
+                                ).toLocaleString()}
+                                /wk
+                              </span>
+                              {onSelectPlayer ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onSelectPlayer(player.id, {
+                                      openRenewal: true,
+                                    });
+                                  }}
+                                >
+                                  {t("common.renewContract")}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  ) : null}
+                  {contractRiskStaff.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-heading font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                        {t("finances.contractRiskStaff", "Staff")}
+                      </p>
+                      <div className="space-y-3">
+                        {contractRiskStaff.map(({ staff: s, riskLevel }) => (
+                          <div
+                            key={s.id}
+                            className="rounded-lg border border-gray-200 dark:border-navy-600 bg-white dark:bg-navy-700 p-3 flex items-start justify-between gap-3"
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedRiskStaffIds.includes(s.id)}
+                                onChange={() => handleToggleRiskStaff(s.id)}
+                                aria-label={`Select ${s.first_name} ${s.last_name}`}
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500/30"
+                              />
+                              <div className="space-y-1">
+                                <p className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                                  {s.first_name} {s.last_name}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t(`staff.roles.${s.role}`)}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t("finances.contractExpiresOn", {
+                                    date: s.contract_end,
+                                  })}
+                                </p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t("playerProfile.yearsRemaining")}:{" "}
+                                  {getContractYearsRemaining(
+                                    s.contract_end,
+                                    gameState.clock.current_date,
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <Badge
+                                variant={getContractRiskBadgeVariant(riskLevel)}
+                              >
+                                {riskLevel === "critical"
+                                  ? t("finances.contractRiskCritical")
+                                  : t("finances.contractRiskWarning")}
+                              </Badge>
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                €
+                                {annualAmountToWeeklyCommitment(
+                                  s.wage,
+                                ).toLocaleString()}
+                                /wk
+                              </span>
+                              {onSelectStaff ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onSelectStaff(s.id);
+                                  }}
+                                >
+                                  {t("common.renewContract")}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -820,6 +977,84 @@ export default function FinancesTab({
                   })}
               </tbody>
             </table>
+            {teamStaff.length > 0 ? (
+              <>
+                <div className="border-t border-gray-200 dark:border-navy-600 px-5 py-3 flex items-center gap-2 text-xs font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  <UserCog className="w-4 h-4" />
+                  {t("finances.payrollStaff", "Staff payroll")}
+                </div>
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-navy-800 border-b border-gray-200 dark:border-navy-600 text-xs">
+                      <th className="py-3 px-5 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {t("common.name", "Name")}
+                      </th>
+                      <th className="py-3 px-5 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {t("staff.role", "Role")}
+                      </th>
+                      <th className="py-3 px-5 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {t("finances.wagePerWeek")}
+                      </th>
+                      <th className="py-3 px-5 font-heading font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {t("common.contract")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-navy-600">
+                    {[...teamStaff]
+                      .sort((a, b) => b.wage - a.wage)
+                      .map((s) => {
+                        const contextItems = onSelectStaff
+                          ? [
+                              {
+                                label: t("squad.viewProfile", "View profile"),
+                                icon: <UserCog className="w-4 h-4" />,
+                                onClick: () => onSelectStaff(s.id),
+                              },
+                            ]
+                          : [];
+                        const row = (
+                          <tr
+                            key={s.id}
+                            onClick={() => onSelectStaff?.(s.id)}
+                            className={`hover:bg-gray-50 dark:hover:bg-navy-700/50 transition-colors ${onSelectStaff ? "cursor-pointer group" : ""}`}
+                          >
+                            <td className="py-3 px-5 font-semibold text-sm text-gray-800 dark:text-gray-200">
+                              <span className="group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                                {s.first_name} {s.last_name}
+                              </span>
+                            </td>
+                            <td className="py-3 px-5 text-sm text-gray-600 dark:text-gray-400">
+                              {t(`staff.roles.${s.role}`)}
+                            </td>
+                            <td className="py-3 px-5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                              €
+                              {annualAmountToWeeklyCommitment(
+                                s.wage,
+                              ).toLocaleString()}
+                            </td>
+                            <td className="py-3 px-5 text-sm text-gray-500 dark:text-gray-400">
+                              {s.contract_end
+                                ? t("finances.until", {
+                                    year: s.contract_end.substring(0, 4),
+                                  })
+                                : "—"}
+                            </td>
+                          </tr>
+                        );
+                        if (!onSelectStaff) {
+                          return row;
+                        }
+                        return (
+                          <ContextMenu items={contextItems} key={s.id}>
+                            {row}
+                          </ContextMenu>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </>
+            ) : null}
           </div>
         </CardBody>
       </Card>

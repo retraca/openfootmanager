@@ -18,8 +18,10 @@ import {
   hasDashboardProfileHistory,
   navigateDashboardProfiles,
   openDashboardSearchPlayer,
+  openDashboardSearchStaff,
   openDashboardSearchTeam,
   selectDashboardPlayer,
+  selectDashboardStaff,
   selectDashboardTeam,
   type DashboardNavigateContext,
 } from "../components/dashboard/dashboardProfileNavigation";
@@ -310,6 +312,12 @@ export default function Dashboard(): JSX.Element {
     );
   }
 
+  function selectStaff(id: string): void {
+    setProfileNavigation((currentState) =>
+      selectDashboardStaff(currentState, id),
+    );
+  }
+
   function handleSearchFocus(): void {
     setSearchOpen(true);
   }
@@ -332,6 +340,13 @@ export default function Dashboard(): JSX.Element {
   function handleSelectSearchTeam(teamId: string): void {
     setProfileNavigation((currentState) =>
       openDashboardSearchTeam(currentState, teamId),
+    );
+    setSearchQuery("");
+  }
+
+  function handleSelectSearchStaff(staffId: string): void {
+    setProfileNavigation((currentState) =>
+      openDashboardSearchStaff(currentState, staffId),
     );
     setSearchQuery("");
   }
@@ -383,6 +398,7 @@ export default function Dashboard(): JSX.Element {
     handlers: {
       onSelectPlayer: selectPlayer,
       onSelectTeam: selectTeam,
+      onSelectStaff: selectStaff,
       onGameUpdate: setGameState,
       onNavigate: handleNavigate,
     },
@@ -439,6 +455,7 @@ export default function Dashboard(): JSX.Element {
           isSaving={isSaving}
           matchMode={matchMode}
           matchedPlayers={searchResults.matchedPlayers}
+          matchedStaff={searchResults.matchedStaff}
           matchedTeams={searchResults.matchedTeams}
           modeMeta={MODE_META}
           onBack={handleBack}
@@ -449,6 +466,7 @@ export default function Dashboard(): JSX.Element {
           onSearchQueryChange={handleSearchQueryChange}
           onSelectMatchMode={handleSelectMatchMode}
           onSelectSearchPlayer={handleSelectSearchPlayer}
+          onSelectSearchStaff={handleSelectSearchStaff}
           onSelectSearchTeam={handleSelectSearchTeam}
           onSkipToMatchDay={handleSkipToMatchDay}
           onToggleContinueMenu={handleToggleContinueMenu}
@@ -469,6 +487,7 @@ export default function Dashboard(): JSX.Element {
           onNavigate={handleNavigate}
           onSelectPlayer={selectPlayer}
           onSelectTeam={selectTeam}
+          onSelectStaff={selectStaff}
           onGameUpdate={setGameState}
         />
       </main>
