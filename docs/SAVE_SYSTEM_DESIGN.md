@@ -129,7 +129,9 @@ CREATE TABLE staff (
     team_id             TEXT,
     specialization      TEXT,            -- NULL if none
     wage                INTEGER NOT NULL DEFAULT 0,
-    contract_end        TEXT
+    contract_end        TEXT,
+    morale              INTEGER NOT NULL DEFAULT 100,
+    morale_core         TEXT NOT NULL DEFAULT '{}'  -- JSON for PlayerMoraleCore (renewal sessions)
 );
 
 CREATE TABLE league (

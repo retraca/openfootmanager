@@ -22,6 +22,7 @@ vi.mock("react-i18next", () => ({
       if (key === "staff.noAvailableStaff") return "No available staff";
       if (key === "staff.releaseStaff") return "Release staff";
       if (key === "staff.hireStaff") return "Hire staff";
+      if (key === "squad.viewProfile") return "View profile";
       if (key === "common.age") return "Age";
       if (key === "staff.best") return "Best";
       if (key.startsWith("staff.roles.")) return key.replace("staff.roles.", "");
@@ -172,5 +173,18 @@ describe("StaffTab", () => {
       expect(invokeMock).toHaveBeenCalledWith("hire_staff", { staffId: "staff-2" });
       expect(onGameUpdate).toHaveBeenCalledWith(updatedState);
     });
+  });
+
+  it("calls onSelectStaff when profile control is used on my staff", () => {
+    const onSelectStaff = vi.fn();
+    render(
+      <StaffTab
+        gameState={createGameState([createStaff()])}
+        onSelectStaff={onSelectStaff}
+      />,
+    );
+
+    fireEvent.click(screen.getByTitle("View profile"));
+    expect(onSelectStaff).toHaveBeenCalledWith("staff-1");
   });
 });

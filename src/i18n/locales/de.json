@@ -74,11 +74,12 @@
     "simulating": "Simuliere...",
     "loading": "Spielstand wird geladen...",
     "noResults": "Keine Ergebnisse gefunden.",
-    "searchPlaceholder": "Spieler, Teams suchen...",
+    "searchPlaceholder": "Spieler, Teams, Staff suchen...",
     "sectionClub": "Verein",
     "sectionWorld": "Welt",
     "searchTeams": "Teams",
     "searchPlayers": "Spieler",
+    "searchStaff": "Staff",
     "scouting": "Scouting",
     "youthAcademy": "Jugendakademie",
     "saveGame": "Spiel speichern",
@@ -91,7 +92,11 @@
       "injuredStartingXi": "{{count}} verletzte(r) Spieler in der Startelf — ersetze sie",
       "incompleteStartingXi": "Startelf unvollständig — stelle deine Aufstellung ein",
       "urgentUnread": "{{count}} dringende Nachricht(en) ungelesen",
-      "matchTodayStartingXi": "Heute ist Spieltag! Stelle deine Startelf ein"
+      "matchTodayStartingXi": "Heute ist Spieltag! Stelle deine Startelf ein",
+      "financeCrisis": "Finanzlage kritisch — Saldo {{balance}}, Puffer {{weeks}} Woche(n)",
+      "financeRunway": "Finanzpuffer nur noch {{count}} Woche(n)",
+      "wagePressure": "Gehaltslast bei {{percent}}% des Budgets",
+      "contractDeadlines": "{{count}} Spieler- oder Staff-Verträge benötigen bald Aufmerksamkeit"
     }
   },
   "continueMenu": {
@@ -292,6 +297,7 @@
     "position": "Position",
     "nationality": "Nationalität",
     "contract": "Vertrag",
+    "viewProfile": "Profil ansehen",
     "renewContract": "Vertrag verlängern",
     "status": "Status",
     "average": "Durchschnitt",
@@ -640,6 +646,7 @@
     "noAvailableStaff": "Kein Staff verfügbar.",
     "releaseStaff": "Staffmitglied entlassen",
     "hireStaff": "Staffmitglied einstellen",
+    "role": "Rolle",
     "best": "Bester",
     "roles": {
       "AssistantManager": "Co-Trainer",
@@ -663,6 +670,20 @@
       "Youth": "Jugend"
     }
   },
+  "staffProfile": {
+    "renewalFeedbackBlockedHeadline": "Sie führen das Gespräch noch nicht wieder.",
+    "renewalFeedbackBlockedDetail": "Deine frühere Haltung wirkt nach, deshalb gibt es vorerst kein neues Gespräch.",
+    "renewalFeedbackAcceptedLateHeadline": "Zugestimmt, aber die Geduld war kaum noch da.",
+    "renewalFeedbackAcceptedLateDetail": "Die Einigung kam nach härterem Austausch; sie waren kurz davor abzubrechen.",
+    "renewalFeedbackAcceptedHeadline": "Sie waren mit dem Paket zufrieden.",
+    "renewalFeedbackAcceptedDetail": "Das Angebot entsprach ihren Erwartungen nahe genug für einen sauberen Abschluss.",
+    "renewalFeedbackTenseHeadline": "Die Verhandlung ist schwierig.",
+    "renewalFeedbackTenseDetail": "Vertrauen, Moral oder Zeitdruck lässt sie hart verhandeln. Ein weiteres schwaches Angebot kann alles beenden.",
+    "renewalFeedbackFirmHeadline": "Sie wollen klarere Vorteile, bevor sie unterschreiben.",
+    "renewalFeedbackFirmDetail": "Gehalt und Laufzeit müssen von ihrer Seite klar fair wirken.",
+    "renewalFeedbackCalmHeadline": "Die Gespräche bleiben sachlich und offen.",
+    "renewalFeedbackCalmDetail": "Das fühlt sich noch nach normalem Hin und Her an; Beziehung und Timing sind machbar."
+  },
   "finances": {
     "overview": "Finanzübersicht",
     "wageBill": "Gehaltsliste",
@@ -671,6 +692,9 @@
     "underBudget": "Im Budget",
     "overBudget": "Über dem Budget!",
     "payroll": "Gehälter — Topverdiener",
+    "payrollStaff": "Staff-Gehälter",
+    "contractRiskPlayers": "Spieler",
+    "contractRiskStaff": "Staff",
     "squadValue": "Kaderwert",
     "clubBalance": "Vereinssaldo",
     "wageBudget": "Gehaltsbudget",

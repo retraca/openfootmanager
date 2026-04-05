@@ -216,7 +216,9 @@ describe("PreMatchLineup component", () => {
     render(<PreMatchLineup {...defaultProps} />);
     expect(screen.getByText("match.opponent")).toBeInTheDocument();
     expect(screen.getByText("Rival United")).toBeInTheDocument();
-    expect(screen.getByText("3-5-2 · Counter")).toBeInTheDocument();
+    expect(
+      screen.getByText("3-5-2 · tactics.playStyles.Counter"),
+    ).toBeInTheDocument();
   });
 
   it("renders auto-select button and calls onAutoSelect", () => {

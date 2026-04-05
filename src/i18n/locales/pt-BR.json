@@ -72,13 +72,14 @@
     "exitToMenu": "Voltar ao Menu",
     "continue": "Continuar",
     "simulating": "Simulando...",
-    "searchPlaceholder": "Buscar jogadores, times...",
+    "searchPlaceholder": "Buscar jogadores, times, comissão...",
     "sectionClub": "Clube",
     "sectionWorld": "Mundo",
     "loading": "Carregando...",
     "noResults": "Sem resultados.",
     "searchTeams": "Times",
     "searchPlayers": "Jogadores",
+    "searchStaff": "Comissão",
     "scouting": "Observação",
     "youthAcademy": "Base",
     "saveGame": "Salvar jogo",
@@ -91,7 +92,11 @@
       "injuredStartingXi": "{{count}} jogador(es) lesionado(s) entre os titulares — substitua-os",
       "incompleteStartingXi": "A escalação titular está incompleta — ajuste seu time",
       "urgentUnread": "{{count}} mensagem(ns) urgente(s) não lida(s)",
-      "matchTodayStartingXi": "Tem jogo hoje! Ajuste sua escalação titular"
+      "matchTodayStartingXi": "Tem jogo hoje! Ajuste sua escalação titular",
+      "financeCrisis": "Finanças críticas — saldo {{balance}}, folga {{weeks}} semana(s)",
+      "financeRunway": "Caixa reduzida a {{count}} semana(s)",
+      "wagePressure": "Folha salarial em {{percent}}% do orçamento",
+      "contractDeadlines": "{{count}} contrato(s) de jogadores ou comissão precisam de atenção em breve"
     }
   },
   "continueMenu": {
@@ -292,6 +297,7 @@
     "position": "Posição",
     "nationality": "Nacionalidade",
     "contract": "Contrato",
+    "viewProfile": "Ver perfil",
     "renewContract": "Renovar contrato",
     "status": "Status",
     "average": "Média",
@@ -640,6 +646,7 @@
     "noAvailableStaff": "Nenhuma comissão técnica disponível.",
     "releaseStaff": "Dispensar membro da comissão",
     "hireStaff": "Contratar membro da comissão",
+    "role": "Função",
     "best": "Melhor",
     "roles": {
       "AssistantManager": "Assistente Técnico",
@@ -663,6 +670,20 @@
       "Youth": "Base"
     }
   },
+  "staffProfile": {
+    "renewalFeedbackBlockedHeadline": "Ainda não retomam a conversa.",
+    "renewalFeedbackBlockedDetail": "Sua postura anterior ainda pesa no clima; por ora não voltam a negociar.",
+    "renewalFeedbackAcceptedLateHeadline": "Aceitaram, mas a paciência estava no limite.",
+    "renewalFeedbackAcceptedLateDetail": "O acordo veio depois de uma troca mais dura; estavam quase encerrando.",
+    "renewalFeedbackAcceptedHeadline": "Ficaram contentes com o pacote.",
+    "renewalFeedbackAcceptedDetail": "A proposta encaixou o bastante às expectativas para fechar com clareza.",
+    "renewalFeedbackTenseHeadline": "A negociação está difícil.",
+    "renewalFeedbackTenseDetail": "Confiança, moral ou prazo apertado os leva a exigir. Outra proposta fraca pode acabar tudo.",
+    "renewalFeedbackFirmHeadline": "Querem vantagens mais claras antes de assinar.",
+    "renewalFeedbackFirmDetail": "Salário e duração precisam parecer claramente justos do lado deles.",
+    "renewalFeedbackCalmHeadline": "O diálogo segue aberto e profissional.",
+    "renewalFeedbackCalmDetail": "Ainda parece um vai e volta normal; relação e tempo são gerenciáveis."
+  },
   "finances": {
     "overview": "Visão Financeira",
     "wageBill": "Folha Salarial",
@@ -671,6 +692,9 @@
     "underBudget": "Dentro do orçamento",
     "overBudget": "Acima do orçamento!",
     "payroll": "Folha de Pagamento — Maiores Salários",
+    "payrollStaff": "Salários da comissão",
+    "contractRiskPlayers": "Jogadores",
+    "contractRiskStaff": "Comissão",
     "squadValue": "Valor do Elenco",
     "clubBalance": "Saldo do Clube",
     "wageBudget": "Teto Salarial",

@@ -181,7 +181,7 @@ describe("calcOvr (match)", () => {
 describe("getEventDisplay", () => {
   it("returns known display for Goal event", () => {
     const display = getEventDisplay({ minute: 10, event_type: "Goal", side: "Home", zone: "Box", player_id: "p1", secondary_player_id: null });
-    expect(display.color).toBe("text-accent-400");
+    expect(display.color).toBe("text-accent-700 dark:text-accent-400");
     expect(display.important).toBe(true);
   });
 
@@ -193,13 +193,13 @@ describe("getEventDisplay", () => {
 
   it("returns known display for ShotSaved (non-important)", () => {
     const display = getEventDisplay({ minute: 30, event_type: "ShotSaved", side: "Home", zone: "Box", player_id: "p1", secondary_player_id: null });
-    expect(display.color).toBe("text-green-400");
+    expect(display.color).toBe("text-green-700 dark:text-green-400");
     expect(display.important).toBe(false);
   });
 
   it("returns default display for unknown event type", () => {
     const display = getEventDisplay({ minute: 1, event_type: "UnknownEvent", side: "Home", zone: "Midfield", player_id: null, secondary_player_id: null });
-    expect(display.color).toBe("text-gray-400");
+    expect(display.color).toBe("text-gray-700 dark:text-gray-400");
     expect(display.important).toBe(false);
   });
 });
